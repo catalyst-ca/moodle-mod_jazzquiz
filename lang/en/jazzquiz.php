@@ -299,3 +299,5 @@ $string['privacy:metadata:jazzquiz_attempts:responded'] = 'Whether or not the la
 $string['privacy:metadata:jazzquiz_attempts:timestart'] = 'The time that the last question in the attempt was started.';
 $string['privacy:metadata:jazzquiz_attempts:timefinish'] = 'The time that the last question in the attempt was finished.';
 $string['privacy:metadata:jazzquiz_attempts:timemodified'] = 'The time that the last question in the attempt was modified.';
+$string['privacy:metadata:jazzquiz_attendance'] = 'Stores attendance information for JazzQuiz sessions.';
+$string['privacy:metadata:jazzquiz_attendance:userid'] = 'The ID of the user attending the JazzQuiz session.';
