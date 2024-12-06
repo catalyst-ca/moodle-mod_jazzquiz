@@ -48,7 +48,8 @@ class provider implements
     \core_privacy\local\metadata\provider,
 
     // This plugin currently implements the original plugin_provider interface.
-    \core_privacy\local\request\plugin\provider {
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\request\core_userlist_provider{
 
     /**
      * Returns meta data about this system.
@@ -68,6 +69,11 @@ class provider implements
             'timefinish' => 'privacy:metadata:jazzquiz_attempts:timefinish',
             'timemodified' => 'privacy:metadata:jazzquiz_attempts:timemodified'
         ], 'privacy:metadata:jazzquiz_attempts');
+
+        // Add metadata for the 'jazzquiz_attendance' table.
+        $items->add_database_table('jazzquiz_attendance', [
+            'userid' => 'privacy:metadata:jazzquiz_attendance:userid',
+        ], 'privacy:metadata:jazzquiz_attendance');
 
         // The 'jazzquiz_merges' table is used to merge one question attempt into another in a JazzQuiz session.
         // It does not contain user data.
@@ -267,4 +273,53 @@ class provider implements
         \core_question\privacy\provider::delete_data_for_user($contextlist);
     }
 
+    /**
+     * Add user IDs having data within a context to the userlist.
+     *
+     * @param userlist $userlist The userlist containing the list of users who have data in this context.
+     */
+    public static function get_users_in_context(userlist|\core_privacy\local\request\userlist $userlist) {
+        global $DB;
+
+        $sql = "SELECT ja.userid
+                  FROM {jazzquiz_attempts} ja
+                  JOIN {jazzquiz_sessions} js ON js.id = ja.sessionid
+                  JOIN {jazzquiz} jq ON jq.id = js.jazzquizid
+                  JOIN {course_modules} cm ON cm.instance = jq.id
+                  JOIN {context} cx ON cx.instanceid = cm.id
+                 WHERE cx.id = :contextid";
+        $params = ['contextid' => $userlist->get_context()->id];
+
+        $userids = $DB->get_fieldset_sql($sql, $params);
+
+        foreach ($userids as $userid) {
+            $userlist->add_user($userid);
+        }
+    }
+
+    /**
+     * Delete multiple users within a single context.
+     *
+     * @param userlist $userlist The approved context and user information to delete information for.
+     */
+    public static function delete_data_for_users(userlist|\core_privacy\local\request\approved_userlist $userlist) {
+        global $DB;
+
+        $context = $userlist->get_context();
+        if ($context->contextlevel !== CONTEXT_MODULE) {
+            return;
+        }
+
+        $cm = get_coursemodule_from_id('jazzquiz', $context->instanceid);
+        if (!$cm) {
+            return;
+        }
+
+        $sessions = $DB->get_records('jazzquiz_sessions', ['jazzquizid' => $cm->instance]);
+        foreach ($userlist->get_userids() as $userid) {
+            foreach ($sessions as $session) {
+                $DB->delete_records('jazzquiz_attempts', ['userid' => $userid, 'sessionid' => $session->id]);
+            }
+        }
+    }
 }
